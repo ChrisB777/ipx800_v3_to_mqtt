@@ -1,5 +1,6 @@
 """IPX800 API client."""
 
+import asyncio
 import aiohttp
 import xml.etree.ElementTree as ET
 from typing import Optional, Tuple
@@ -44,9 +45,9 @@ class IPX800Client:
                     return None
 
                 xml_content = await response.text()
-                return self._parse_global_status(xml_content)
+                return await asyncio.to_thread(self._parse_global_status, xml_content)
 
-        except Exception as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.error("error fetching status", error=str(e))
             return None
 
@@ -90,6 +91,9 @@ class IPX800Client:
         Returns:
             True if successful
         """
+        if not (0 <= index <= 31):
+            logger.error("invalid output index", index=index)
+            return False
         try:
             session = await self._get_session()
             # Use preset.htm for forced ON/OFF
@@ -98,6 +102,6 @@ class IPX800Client:
             async with session.get(url, timeout=10) as response:
                 return response.status == 200
 
-        except Exception as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.error("error setting output", index=index, value=value, error=str(e))
             return False

@@ -1,7 +1,7 @@
 """Tests for IPX800 client."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import aiohttp
 from src.ipx800_client import IPX800Client
 
@@ -37,3 +37,30 @@ class TestIPX800Client:
         assert inputs[1] is False  # btn2
         assert outputs[0] is True  # led0
         assert outputs[1] is False  # led1
+
+    @pytest.mark.asyncio
+    async def test_set_output_invalid_index(self, client):
+        """Test set_output with invalid index."""
+        result = await client.set_output(32, True)
+        assert result is False
+
+        result = await client.set_output(-1, True)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_get_global_status_returns_coroutine(self, client):
+        """Test that get_global_status is async and returns a coroutine."""
+        import inspect
+
+        result = client.get_global_status()
+        assert inspect.iscoroutine(result)
+        result.close()  # Clean up unawaited coroutine
+
+    @pytest.mark.asyncio
+    async def test_set_output_returns_coroutine(self, client):
+        """Test that set_output is async and returns a coroutine."""
+        import inspect
+
+        result = client.set_output(0, True)
+        assert inspect.iscoroutine(result)
+        result.close()  # Clean up unawaited coroutine
