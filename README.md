@@ -35,11 +35,24 @@ docker-compose up -d
 | `POLLING_INTERVAL` | Polling interval (s) | 30 |
 | `LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) | INFO |
 
-### Create a .env file
+### Docker Compose Configuration
 
+Configuration is passed via environment variables in `docker-compose.yml`:
+
+```yaml
+services:
+  ipx800-mqtt:
+    environment:
+      - IPX800_HOST=192.168.1.100
+      - IPX800_PASSWORD=your_password
+      - MQTT_BROKER_HOST=mosquitto
+```
+
+Or use an `.env` file with docker-compose (optional):
 ```bash
-cp .env.example .env
-# Edit .env with your settings
+# Create .env file with your values
+echo "IPX800_PASSWORD=secret" > .env
+docker-compose up -d
 ```
 
 ### IPX800 Configuration
