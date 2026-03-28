@@ -7,31 +7,31 @@ Status: draft
 
 ## Problem Statement
 
-Créer un bridge MQTT pour l'IPX800 v3 afin de l'intégrer à HomeAssistant.
-L'IPX800 est une carte domotique avec 32 relais et 32 entrées digitales.
+Create an MQTT bridge for the IPX800 v3 to integrate it with HomeAssistant.
+The IPX800 is a domotics card with 32 relays and 32 digital inputs.
 
 ---
 
 ## Constraints
 
-- Container Docker
+- Docker container
 - Language: Python 3.11+
-- Protocole push (HTTP) + polling (API REST) pour la récupération des états
-- Auto-discovery HomeAssistant MQTT
-- Authentification IPX800 via user/password
-- Gestion des relais (ON/OFF) et entrées digitales uniquement
+- Push protocol (HTTP) + polling (API REST) for state retrieval
+- HomeAssistant MQTT auto-discovery
+- IPX800 authentication via user/password
+- Management of relays (ON/OFF) and digital inputs only
 
 ---
 
 ## Architecture
 
-Architecture monolithique asyncio avec les composants suivants:
+Monolithic asyncio architecture with the following components:
 
-1. **HTTP Server** - Reçoit les push de l'IPX800
-2. **MQTT Client** - Connexion au broker + publish/subscribe
-3. **State Manager** - Stockage et synchronisation des états
-4. **Polling Task** - Récupération périodique via API REST
-5. **Auto-Discovery Publisher** - Configuration HomeAssistant
+1. **HTTP Server** - Receives push notifications from IPX800
+2. **MQTT Client** - Connection to broker + publish/subscribe
+3. **State Manager** - State storage and synchronization
+4. **Polling Task** - Periodic retrieval via REST API
+5. **Auto-Discovery Publisher** - HomeAssistant configuration
 
 ---
 
@@ -56,25 +56,25 @@ IPX800 v3 --(HTTP Push)--> HTTP Server ---> State Manager
 
 **Endpoint:** `POST /api/ipx/push`
 
-**Paramètres attendus:**
-- `mac` : Adresse MAC de l'IPX800
-- `inputs` : 32 caractères (0/1) représentant l'état des entrées
-- `outputs` : 32 caractères (0/1) représentant l'état des sorties
+**Expected parameters:**
+- `mac` : MAC address of the IPX800
+- `inputs` : 32 characters (0/1) representing input states
+- `outputs` : 32 characters (0/1) representing output states
 
-**Format URL configurée dans l'IPX800:**
+**URL format configured in IPX800:**
 ```
 http://container:8080/api/ipx/push?mac=$M&inputs=$I&outputs=$O
 ```
 
 ### 2. MQTT Client
 
-**Topics de publication:**
-- `ipx800/{mac}/relay/{n}/state` : État des relais (ON/OFF)
-- `ipx800/{mac}/input/{n}/state` : État des entrées digitales (ON/OFF)
+**Publication topics:**
+- `ipx800/{mac}/relay/{n}/state` : Relay state (ON/OFF)
+- `ipx800/{mac}/input/{n}/state` : Digital input state (ON/OFF)
 - `ipx800/{mac}/availability` : Online/offline
 
-**Topics de souscription:**
-- `ipx800/{mac}/relay/{n}/set` : Commandes HomeAssistant (ON/OFF)
+**Subscription topics:**
+- `ipx800/{mac}/relay/{n}/set` : HomeAssistant commands (ON/OFF)
 
 **Auto-discovery topics:**
 - `homeassistant/switch/ipx800_{mac}_{n}/config`
@@ -82,33 +82,33 @@ http://container:8080/api/ipx/push?mac=$M&inputs=$I&outputs=$O
 
 ### 3. State Manager
 
-- Stockage en mémoire avec `asyncio.Lock`
-- Détection des changements
-- Synchronisation push ↔ polling
+- In-memory storage with `asyncio.Lock`
+- Change detection
+- Push ↔ polling synchronization
 
 ### 4. Polling Task
 
-**Intervalle:** Configurable (défaut 30s)
+**Interval:** Configurable (default 30s)
 
-**Sources de données:**
-- `http://ipx800/globalstatus.xml` - XML avec état complet
-- `http://ipx800/api/xdevices.json?cmd=10` - Entrées (JSON)
-- `http://ipx800/api/xdevices.json?cmd=20` - Sorties (JSON)
+**Data sources:**
+- `http://ipx800/globalstatus.xml` - XML with complete state
+- `http://ipx800/api/xdevices.json?cmd=10` - Inputs (JSON)
+- `http://ipx800/api/xdevices.json?cmd=20` - Outputs (JSON)
 
-**Authentification:** Basic Auth (user:password)
+**Authentication:** Basic Auth (user:password)
 
 ### 5. Auto-Discovery Publisher
 
-Publié au démarrage pour chaque relais et entrée:
-- Unique ID basé sur MAC
-- Friendly name configurable
-- Device info (fabricant, modèle)
+Published at startup for each relay and input:
+- Unique ID based on MAC
+- Configurable friendly name
+- Device info (manufacturer, model)
 
 ---
 
 ## Configuration
 
-### Variables d'environnement
+### Environment Variables
 
 ```env
 # IPX800 Configuration
@@ -134,9 +134,9 @@ LOG_LEVEL=INFO
 
 ## Error Handling
 
-| Composant | Erreur | Stratégie |
-|-----------|--------|-----------|
-| MQTT | Déconnexion | Retry exponential backoff (max 60s) |
+| Component | Error | Strategy |
+|-----------|-------|----------|
+| MQTT | Disconnection | Exponential backoff retry (max 60s) |
 | HTTP Server | Exception | Log + continue |
 | Polling | Timeout/Auth fail | Retry 3x + log warning |
 | IPX800 API | 4xx/5xx | Log error + skip cycle |
@@ -145,14 +145,14 @@ LOG_LEVEL=INFO
 
 ## Testing Strategy
 
-1. **Tests unitaires** - Mock MQTT et HTTP
-2. **Tests d'intégration** - Docker Compose avec Mosquitto
-3. **Tests E2E** - Simulation IPX800 avec mock serveur
+1. **Unit tests** - Mock MQTT and HTTP
+2. **Integration tests** - Docker Compose with Mosquitto
+3. **E2E tests** - IPX800 simulation with mock server
 
 ---
 
 ## Open Questions
 
-- Nombre de relais/entrées à exposer (configurable ou fixe 32?) → **Fixe 32 pour MVP**
-- Gestion des entrées analogiques? → **Non, hors scope**
-- Format de log (JSON ou texte)? → **Texte structuré**
+- Number of relays/inputs to expose (configurable or fixed 32?) → **Fixed 32 for MVP**
+- Analog input management? → **No, out of scope**
+- Log format (JSON or text)? → **Structured text**
