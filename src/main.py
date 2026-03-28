@@ -57,6 +57,7 @@ class IPX800Bridge:
             self.config.mqtt_username,
             self.config.mqtt_password,
             self.state_manager,
+            topic_prefix=self.config.mqtt_topic_prefix,
         )
         self.mqtt_client.set_command_handler(self.handle_mqtt_command)
 
@@ -140,7 +141,7 @@ class IPX800Bridge:
         if not mac or not self.mqtt_client:
             return
 
-        discovery = AutoDiscovery(mac)
+        discovery = AutoDiscovery(mac, topic_prefix=self.config.mqtt_topic_prefix)
         topics = discovery.get_discovery_topics()
 
         for topic, payload in topics:

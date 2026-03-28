@@ -33,3 +33,14 @@ class TestConfig:
         config = get_config()
         assert isinstance(config, Config)
         assert config.ipx800_host == "192.168.0.10"
+
+    def test_topic_prefix_default(self):
+        """Test default MQTT topic prefix."""
+        config = Config()
+        assert config.mqtt_topic_prefix == "ipx800"
+
+    def test_topic_prefix_override(self, monkeypatch):
+        """Test MQTT topic prefix override."""
+        monkeypatch.setenv("MQTT_TOPIC_PREFIX", "myhome")
+        config = Config()
+        assert config.mqtt_topic_prefix == "myhome"

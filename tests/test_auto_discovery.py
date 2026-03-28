@@ -41,3 +41,11 @@ class TestAutoDiscovery:
         topic, payload = topics[0]
         assert "homeassistant/switch/" in topic
         assert json.loads(payload)["name"] == "Relay 1"
+
+    def test_custom_prefix(self):
+        """Test custom topic prefix in discovery."""
+        discovery = AutoDiscovery("00:04:A3:87:00:1F", topic_prefix="myhome")
+        config = discovery.generate_relay_config(0)
+
+        assert "myhome" in config["state_topic"]
+        assert "myhome" in config["unique_id"]

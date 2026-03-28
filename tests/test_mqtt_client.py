@@ -22,3 +22,8 @@ class TestMQTTClient:
         """Test MAC address formatting."""
         client.set_mac_address("00:04:A3:87:00:1F")
         assert client._mac_address == "0004A387001F"
+
+    def test_topic_prefix(self):
+        """Test custom topic prefix."""
+        client = MQTTClient("mosquitto", 1883, "test-client", topic_prefix="myhome")
+        assert client.topic_prefix == "myhome"

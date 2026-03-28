@@ -20,6 +20,7 @@ class MQTTClient:
         username: Optional[str] = None,
         password: Optional[str] = None,
         state_manager: Optional[Any] = None,
+        topic_prefix: str = "ipx800",
     ):
         self.broker_host = broker_host
         self.broker_port = broker_port
@@ -27,6 +28,7 @@ class MQTTClient:
         self.username = username
         self.password = password
         self.state_manager = state_manager
+        self.topic_prefix = topic_prefix
 
         self._client: Optional[mqtt.Client] = None
         self._connected = False
@@ -81,7 +83,7 @@ class MQTTClient:
         if not self._mac_address:
             return
 
-        topic = f"ipx800/{self._mac_address}/relay/+/set"
+        topic = f"{self.topic_prefix}/{self._mac_address}/relay/+/set"
         self._client.subscribe(topic)
         logger.info("mqtt_subscribed", topic=topic)
 
@@ -93,7 +95,7 @@ class MQTTClient:
     async def _handle_message(self, msg):
         """Process incoming command."""
         try:
-            # Parse topic: ipx800/{mac}/relay/{n}/set
+            # Parse topic: {prefix}/{mac}/relay/{n}/set
             parts = msg.topic.split("/")
             if len(parts) >= 5 and parts[3].isdigit():
                 relay_index = int(parts[3])
@@ -115,7 +117,7 @@ class MQTTClient:
         if not self._connected or not self._mac_address:
             return
 
-        topic = f"ipx800/{self._mac_address}/relay/{index}/state"
+        topic = f"{self.topic_prefix}/{self._mac_address}/relay/{index}/state"
         payload = "ON" if state else "OFF"
 
         self._client.publish(topic, payload, retain=True)
@@ -126,7 +128,7 @@ class MQTTClient:
         if not self._connected or not self._mac_address:
             return
 
-        topic = f"ipx800/{self._mac_address}/input/{index}/state"
+        topic = f"{self.topic_prefix}/{self._mac_address}/input/{index}/state"
         payload = "ON" if state else "OFF"
 
         self._client.publish(topic, payload, retain=True)
@@ -137,7 +139,7 @@ class MQTTClient:
         if not self._connected or not self._mac_address:
             return
 
-        topic = f"ipx800/{self._mac_address}/availability"
+        topic = f"{self.topic_prefix}/{self._mac_address}/availability"
         payload = "online" if available else "offline"
 
         self._client.publish(topic, payload, retain=True)

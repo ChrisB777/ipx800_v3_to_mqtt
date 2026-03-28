@@ -30,6 +30,7 @@ docker-compose up -d
 | `MQTT_BROKER_PORT` | Port MQTT | 1883 |
 | `MQTT_USERNAME` | Utilisateur MQTT (optionnel) | - |
 | `MQTT_PASSWORD` | Mot de passe MQTT (optionnel) | - |
+| `MQTT_TOPIC_PREFIX` | Prefix des topics MQTT | ipx800 |
 | `HTTP_PORT` | Port du serveur HTTP | 8080 |
 | `POLLING_INTERVAL` | Intervalle de polling (s) | 30 |
 | `LOG_LEVEL` | Niveau de log (DEBUG/INFO/WARNING/ERROR) | INFO |

@@ -19,6 +19,7 @@ class Config(BaseSettings):
     mqtt_username: str = Field(default="", alias="MQTT_USERNAME")
     mqtt_password: str = Field(default="", alias="MQTT_PASSWORD")
     mqtt_client_id: str = Field(default="ipx800-bridge", alias="MQTT_CLIENT_ID")
+    mqtt_topic_prefix: str = Field(default="ipx800", alias="MQTT_TOPIC_PREFIX")
 
     # Bridge Configuration
     http_port: int = Field(default=8080, alias="HTTP_PORT")
