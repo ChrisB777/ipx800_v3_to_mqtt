@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from typing import Optional, Callable, Awaitable
+from typing import Optional, Callable, Awaitable, Any
 import paho.mqtt.client as mqtt
 import structlog
 
@@ -19,7 +19,7 @@ class MQTTClient:
         client_id: str,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        state_manager=None,
+        state_manager: Optional[Any] = None,
     ):
         self.broker_host = broker_host
         self.broker_port = broker_port
@@ -87,7 +87,8 @@ class MQTTClient:
 
     def _on_message(self, client, userdata, msg):
         """Handle incoming message."""
-        asyncio.create_task(self._handle_message(msg))
+        loop = asyncio.get_event_loop()
+        asyncio.run_coroutine_threadsafe(self._handle_message(msg), loop)
 
     async def _handle_message(self, msg):
         """Process incoming command."""
@@ -104,12 +105,12 @@ class MQTTClient:
                     success = await self._command_handler(relay_index, command)
                     if success:
                         # Publish state confirmation
-                        await self.publish_relay_state(relay_index, command == "ON")
+                        self.publish_relay_state(relay_index, command == "ON")
 
         except Exception as e:
             logger.error("mqtt_message_error", error=str(e))
 
-    async def publish_relay_state(self, index: int, state: bool):
+    def publish_relay_state(self, index: int, state: bool):
         """Publish relay state."""
         if not self._connected or not self._mac_address:
             return
@@ -120,7 +121,7 @@ class MQTTClient:
         self._client.publish(topic, payload, retain=True)
         logger.debug("mqtt_published", topic=topic, payload=payload)
 
-    async def publish_input_state(self, index: int, state: bool):
+    def publish_input_state(self, index: int, state: bool):
         """Publish input state."""
         if not self._connected or not self._mac_address:
             return
@@ -131,7 +132,7 @@ class MQTTClient:
         self._client.publish(topic, payload, retain=True)
         logger.debug("mqtt_published", topic=topic, payload=payload)
 
-    async def publish_availability(self, available: bool):
+    def publish_availability(self, available: bool):
         """Publish availability status."""
         if not self._connected or not self._mac_address:
             return
