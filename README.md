@@ -1,14 +1,14 @@
 # IPX800 v3 to MQTT Bridge
 
-Bridge Dockerisé pour connecter une carte IPX800 v3 à HomeAssistant via MQTT.
+Dockerized bridge to connect an IPX800 v3 domotics card to HomeAssistant via MQTT.
 
-## Fonctionnalités
+## Features
 
-- **Push notifications** : Réception instantanée des changements d'état via HTTP
-- **Polling** : Récupération périodique (30s par défaut) pour garantir la cohérence
-- **Auto-discovery** : Détection automatique par HomeAssistant
-- **32 relais** : Commande ON/OFF avec état en temps réel
-- **32 entrées digitales** : État des entrées
+- **Push notifications** : Instant state change reception via HTTP
+- **Polling** : Periodic retrieval (30s by default) to ensure consistency
+- **Auto-discovery** : Automatic detection by HomeAssistant
+- **32 relays** : ON/OFF command with real-time state
+- **32 digital inputs** : Input state monitoring
 
 ## Quick Start
 
@@ -18,65 +18,65 @@ docker-compose up -d
 
 ## Configuration
 
-### Variables d'environnement
+### Environment Variables
 
-| Variable | Description | Défaut |
+| Variable | Description | Default |
 |----------|-------------|---------|
-| `IPX800_HOST` | IP de l'IPX800 | 192.168.1.100 |
-| `IPX800_PORT` | Port HTTP de l'IPX800 | 80 |
-| `IPX800_USERNAME` | Utilisateur IPX800 | admin |
-| `IPX800_PASSWORD` | Mot de passe IPX800 | - |
-| `MQTT_BROKER_HOST` | Host du broker MQTT | mosquitto |
-| `MQTT_BROKER_PORT` | Port MQTT | 1883 |
-| `MQTT_USERNAME` | Utilisateur MQTT (optionnel) | - |
-| `MQTT_PASSWORD` | Mot de passe MQTT (optionnel) | - |
-| `MQTT_TOPIC_PREFIX` | Prefix des topics MQTT | ipx800 |
-| `HTTP_PORT` | Port du serveur HTTP | 8080 |
-| `POLLING_INTERVAL` | Intervalle de polling (s) | 30 |
-| `LOG_LEVEL` | Niveau de log (DEBUG/INFO/WARNING/ERROR) | INFO |
+| `IPX800_HOST` | IP of the IPX800 | 192.168.1.100 |
+| `IPX800_PORT` | HTTP port of the IPX800 | 80 |
+| `IPX800_USERNAME` | IPX800 username | admin |
+| `IPX800_PASSWORD` | IPX800 password | - |
+| `MQTT_BROKER_HOST` | MQTT broker host | mosquitto |
+| `MQTT_BROKER_PORT` | MQTT port | 1883 |
+| `MQTT_USERNAME` | MQTT username (optional) | - |
+| `MQTT_PASSWORD` | MQTT password (optional) | - |
+| `MQTT_TOPIC_PREFIX` | MQTT topic prefix | ipx800 |
+| `HTTP_PORT` | HTTP server port | 8080 |
+| `POLLING_INTERVAL` | Polling interval (s) | 30 |
+| `LOG_LEVEL` | Log level (DEBUG/INFO/WARNING/ERROR) | INFO |
 
-### Créer un fichier .env
+### Create a .env file
 
 ```bash
 cp .env.example .env
-# Éditer .env avec vos paramètres
+# Edit .env with your settings
 ```
 
-### Configuration IPX800
+### IPX800 Configuration
 
-Dans l'interface web de l'IPX800, configurer une notification push :
+In the IPX800 web interface, configure a push notification:
 
 **URL**: `http://<container-ip>:8080/api/ipx/push?mac=$M&inputs=$I&outputs=$O`
 
-Remplacez `<container-ip>` par l'IP du conteneur ou du host Docker.
+Replace `<container-ip>` with the IP of the container or Docker host.
 
-## Utilisation
+## Usage
 
 ### Docker Compose
 
 ```bash
-# Lancer
+# Start
 docker-compose up -d
 
-# Voir les logs
+# View logs
 docker-compose logs -f
 
-# Arrêter
+# Stop
 docker-compose down
 ```
 
 ### HomeAssistant
 
-Les entités sont automatiquement découvertes sous le préfixe `ipx800_`.
+Entities are automatically discovered under the `ipx800_` prefix.
 
-**Relais** (switch):
+**Relays** (switch):
 - Entity ID: `switch.ipx800_XXXXXXXXXXXX_relay_X`
-- Commande: ON/OFF
-- État: Temps réel
+- Command: ON/OFF
+- State: Real-time
 
-**Entrées** (binary_sensor):
+**Inputs** (binary_sensor):
 - Entity ID: `binary_sensor.ipx800_XXXXXXXXXXXX_input_X`
-- État: ON/OFF
+- State: ON/OFF
 
 ## Architecture
 
@@ -87,70 +87,70 @@ Les entités sont automatiquement découvertes sous le préfixe `ipx800_`.
 └─────────────┘                     └──────┬───────┘
                                            │
                                            v
-┌─────────────┐      Polling      ┌──────────────┐     Mise à jour     ┌─────────────┐
-│   IPX800    │ <──────────────── │  Polling     │ ─────────────────> │   State     │
-│    v3       │    (API REST)     │   Task       │      état          │   Manager   │
-└─────────────┘                   └──────────────┘                    └──────┬───────┘
-                                                                             │
-                              ┌──────────────────────────────────────────────┘
+┌─────────────┐      Polling      ┌──────────────┐     State update     ┌─────────────┐
+│   IPX800    │ <──────────────── │  Polling     │ ───────────────────> │   State     │
+│    v3       │    (API REST)     │   Task       │                      │   Manager   │
+└─────────────┘                   └──────────────┘                      └──────┬───────┘
+                                                                               │
+                               ┌───────────────────────────────────────────────┘
+                               v
+                     ┌─────────────────┐
+                     │  MQTT Client    │
+                     │  (Publish)      │
+                     └────────┬────────┘
+                              │
                               v
-                    ┌─────────────────┐
-                    │  MQTT Client    │
-                    │  (Publication)  │
-                    └────────┬────────┘
-                             │
-                             v
-                    ┌─────────────────┐
-                    │   HomeAssistant │
-                    │  (Auto-discover)│
-                    └─────────────────┘
+                     ┌─────────────────┐
+                     │   HomeAssistant │
+                     │  (Auto-discover)│
+                     └─────────────────┘
 ```
 
-## Topics MQTT
+## MQTT Topics
 
-### Publication (sans action requise)
+### Published (no action required)
 
-- `ipx800/{mac}/relay/{n}/state` - État des relais (ON/OFF)
-- `ipx800/{mac}/input/{n}/state` - État des entrées (ON/OFF)
+- `ipx800/{mac}/relay/{n}/state` - Relay state (ON/OFF)
+- `ipx800/{mac}/input/{n}/state` - Input state (ON/OFF)
 - `ipx800/{mac}/availability` - Online/offline
 
-### Commande (publié par HomeAssistant)
+### Commands (published by HomeAssistant)
 
-- `ipx800/{mac}/relay/{n}/set` - Commander un relais (ON/OFF)
+- `ipx800/{mac}/relay/{n}/set` - Command a relay (ON/OFF)
 
-### Auto-Discovery (publié au démarrage)
+### Auto-Discovery (published at startup)
 
-- `homeassistant/switch/ipx800_{mac}_{n}/config` - Configuration relais
-- `homeassistant/binary_sensor/ipx800_{mac}_{n}/config` - Configuration entrées
+- `homeassistant/switch/ipx800_{mac}_{n}/config` - Relay configuration
+- `homeassistant/binary_sensor/ipx800_{mac}_{n}/config` - Input configuration
 
-## Développement
+## Development
 
 ### Tests
 
 ```bash
-# Installer les dépendances
+# Install dependencies
 pip install -r requirements.txt
 
-# Lancer les tests
+# Run tests
 python -m pytest tests/ -v
 
-# Avec couverture
+# With coverage
 python -m pytest tests/ -v --cov=src
 ```
 
-### Structure du projet
+### Project Structure
 
 ```
 ipx800-v3-mqtt/
 ├── src/
 │   ├── __init__.py
-│   ├── main.py              # Point d'entrée
+│   ├── main.py              # Entry point
 │   ├── config.py            # Configuration
-│   ├── state_manager.py     # Gestion d'état
-│   ├── ipx800_client.py     # Client API IPX800
-│   ├── mqtt_client.py       # Client MQTT
-│   ├── http_server.py       # Serveur HTTP push
-│   └── auto_discovery.py    # Auto-discovery HA
+│   ├── state_manager.py     # State management
+│   ├── ipx800_client.py     # IPX800 API client
+│   ├── mqtt_client.py       # MQTT client
+│   ├── http_server.py       # HTTP push server
+│   └── auto_discovery.py    # HA auto-discovery
 ├── tests/
 │   ├── test_config.py
 │   ├── test_state_manager.py
