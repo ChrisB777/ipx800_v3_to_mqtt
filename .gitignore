@@ -24,3 +24,14 @@ wheels/
 .venv
 venv/
 ENV/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Session thoughts - do not commit
+thoughts/
+
+# Test scripts
+test-network.sh

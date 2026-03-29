@@ -28,6 +28,7 @@ class IPX800Bridge:
         self.http_server: Optional[PushServer] = None
         self._shutdown_event = asyncio.Event()
         self._polling_task: Optional[asyncio.Task] = None
+        self._first_poll_complete = False
 
         # Configure logging
         structlog.configure(
@@ -61,8 +62,8 @@ class IPX800Bridge:
         )
         self.mqtt_client.set_command_handler(self.handle_mqtt_command)
 
-        # Create HTTP server
-        self.http_server = PushServer(self.config.http_port, self.state_manager)
+        # Create HTTP server (port 8080 inside container)
+        self.http_server = PushServer(8080, self.state_manager)
 
         # Start HTTP server
         await self.http_server.start()
@@ -107,18 +108,27 @@ class IPX800Bridge:
                 # Publish auto-discovery
                 await self.publish_auto_discovery()
                 # Publish availability
-                await self.mqtt_client.publish_availability(True)
+                self.mqtt_client.publish_availability(True)
 
             # Update states
             changed_inputs = await self.state_manager.update_inputs(inputs)
             changed_outputs = await self.state_manager.update_outputs(outputs)
 
-            # Publish changes to MQTT
+            # Publish to MQTT
             if self.mqtt_client:
-                for idx in changed_outputs:
-                    await self.mqtt_client.publish_relay_state(idx, outputs[idx])
-                for idx in changed_inputs:
-                    await self.mqtt_client.publish_input_state(idx, inputs[idx])
+                if not self._first_poll_complete:
+                    # First poll: publish all states
+                    for idx in range(32):
+                        self.mqtt_client.publish_relay_state(idx, outputs[idx])
+                        self.mqtt_client.publish_input_state(idx, inputs[idx])
+                    logger.info("initial_states_published")
+                    self._first_poll_complete = True
+                else:
+                    # Subsequent polls: publish only changes
+                    for idx in changed_outputs:
+                        self.mqtt_client.publish_relay_state(idx, outputs[idx])
+                    for idx in changed_inputs:
+                        self.mqtt_client.publish_input_state(idx, inputs[idx])
 
     async def polling_loop(self):
         """Background polling task."""
@@ -163,7 +173,7 @@ class IPX800Bridge:
                 pass
 
         if self.mqtt_client:
-            await self.mqtt_client.publish_availability(False)
+            self.mqtt_client.publish_availability(False)
             self.mqtt_client.disconnect()
 
         if self.http_server:

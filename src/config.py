@@ -8,7 +8,7 @@ class Config(BaseSettings):
     """Application configuration from environment variables."""
 
     # IPX800 Configuration
-    ipx800_host: str = Field(default="192.168.1.100", alias="IPX800_HOST")
+    ipx800_host: str = Field(default="192.168.1.12", alias="IPX800_HOST")
     ipx800_port: int = Field(default=80, alias="IPX800_PORT")
     ipx800_username: str = Field(default="admin", alias="IPX800_USERNAME")
     ipx800_password: str = Field(default="", alias="IPX800_PASSWORD")
@@ -22,7 +22,6 @@ class Config(BaseSettings):
     mqtt_topic_prefix: str = Field(default="ipx800", alias="MQTT_TOPIC_PREFIX")
 
     # Bridge Configuration
-    http_port: int = Field(default=8080, alias="HTTP_PORT")
     polling_interval: int = Field(default=30, alias="POLLING_INTERVAL")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 

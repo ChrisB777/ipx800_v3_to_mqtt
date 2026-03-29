@@ -11,21 +11,21 @@ class TestIPX800Client:
 
     @pytest.fixture
     def client(self):
-        return IPX800Client("192.168.1.100", 80, "admin", "password")
+        return IPX800Client("192.168.1.12", 80, "admin", "password")
 
     def test_init(self, client):
         """Test client initialization."""
-        assert client.base_url == "http://192.168.1.100:80"
+        assert client.base_url == "http://192.168.1.12:80"
         assert client.username == "admin"
         assert client.password == "password"
 
     def test_parse_global_status(self, client):
-        """Test XML parsing."""
+        """Test XML parsing with btn0-btn31 and dn/up values."""
         xml_content = """<?xml version="1.0" encoding="ISO-8859-1"?>
         <response>
-            <mac>00:04:A3:87:00:1F</mac>
-            <btn1>1</btn1>
-            <btn2>0</btn2>
+            <config_mac>00:04:A3:87:00:1F</config_mac>
+            <btn0>dn</btn0>
+            <btn1>up</btn1>
             <led0>1</led0>
             <led1>0</led1>
         </response>"""
@@ -33,10 +33,10 @@ class TestIPX800Client:
         mac, inputs, outputs = client._parse_global_status(xml_content)
 
         assert mac == "00:04:A3:87:00:1F"
-        assert inputs[0] is True  # btn1
-        assert inputs[1] is False  # btn2
-        assert outputs[0] is True  # led0
-        assert outputs[1] is False  # led1
+        assert inputs[0] is True  # btn0=dn (pressed)
+        assert inputs[1] is False  # btn1=up (released)
+        assert outputs[0] is True  # led0=1
+        assert outputs[1] is False  # led1=0
 
     @pytest.mark.asyncio
     async def test_set_output_invalid_index(self, client):

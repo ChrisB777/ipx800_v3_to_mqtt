@@ -34,10 +34,14 @@ class MQTTClient:
         self._connected = False
         self._command_handler: Optional[Callable[[int, str], Awaitable[bool]]] = None
         self._mac_address: Optional[str] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def set_mac_address(self, mac: str):
         """Set MAC address for topic construction."""
         self._mac_address = mac.replace(":", "")
+        # Subscribe to commands if already connected
+        if self._connected:
+            self._subscribe_commands()
 
     def set_command_handler(self, handler: Callable[[int, str], Awaitable[bool]]):
         """Set handler for incoming commands."""
@@ -45,6 +49,8 @@ class MQTTClient:
 
     def connect(self):
         """Connect to MQTT broker."""
+        # Store reference to main asyncio loop for callbacks
+        self._loop = asyncio.get_event_loop()
         self._client = mqtt.Client(client_id=self.client_id)
 
         if self.username and self.password:
@@ -82,15 +88,21 @@ class MQTTClient:
         """Subscribe to command topics."""
         if not self._mac_address:
             return
+        if not self._connected:
+            return
 
-        topic = f"{self.topic_prefix}/{self._mac_address}/relay/+/set"
-        self._client.subscribe(topic)
-        logger.info("mqtt_subscribed", topic=topic)
+        # Subscribe to each relay individually
+        for i in range(32):
+            topic = f"{self.topic_prefix}/{self._mac_address}/relay/{i}/set"
+            self._client.subscribe(topic)
+        logger.info("mqtt_subscribed_commands", count=32)
 
     def _on_message(self, client, userdata, msg):
         """Handle incoming message."""
-        loop = asyncio.get_event_loop()
-        asyncio.run_coroutine_threadsafe(self._handle_message(msg), loop)
+        if self._loop and self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(self._handle_message(msg), self._loop)
+        else:
+            logger.warning("no_event_loop_for_message", topic=msg.topic)
 
     async def _handle_message(self, msg):
         """Process incoming command."""

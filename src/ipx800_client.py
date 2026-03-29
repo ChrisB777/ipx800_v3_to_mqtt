@@ -57,16 +57,23 @@ class IPX800Client:
         """Parse globalstatus.xml content."""
         root = ET.fromstring(xml_content)
 
-        # Extract MAC address
-        mac_elem = root.find("mac")
-        mac = mac_elem.text if mac_elem is not None else "unknown"
+        # Extract MAC address (IPX800 uses <config_mac> not <mac>)
+        mac_elem = root.find("config_mac")
+        if mac_elem is not None:
+            mac = mac_elem.text.strip()
+        else:
+            # Fallback to <mac> if present
+            mac_elem = root.find("mac")
+            mac = mac_elem.text.strip() if mac_elem is not None else "unknown"
 
-        # Parse inputs (btn1 to btn32)
+        # Parse inputs (btn0 to btn31)
+        # Note: IPX800 uses btn0-btn31 with values "dn" (down/active) or "up" (up/inactive)
         inputs = []
-        for i in range(1, 33):
+        for i in range(0, 32):
             elem = root.find(f"btn{i}")
             if elem is not None:
-                inputs.append(elem.text == "1")
+                # "dn" = button pressed/active = True, "up" or other = inactive = False
+                inputs.append(elem.text.strip().lower() == "dn")
             else:
                 inputs.append(False)
 

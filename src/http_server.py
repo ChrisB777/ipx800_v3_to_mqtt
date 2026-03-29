@@ -13,21 +13,34 @@ class PushServer:
         self.port = port
         self.state_manager = state_manager
         self.app = web.Application()
+        self.app.router.add_get("/", self.handle_root)
         self.app.router.add_get("/api/ipx/push", self.handle_push)
+        self.app.router.add_post("/api/ipx/push", self.handle_push)
         self.runner: web.AppRunner = None
 
-    async def handle_push(self, request: web.Request) -> web.Response:
-        """Handle push notification from IPX800.
+    async def handle_root(self, request: web.Request) -> web.Response:
+        """Simple health check endpoint."""
+        return web.Response(status=200, text="IPX800 Bridge OK")
 
-        Expected query params:
+    async def handle_push(self, request: web.Request) -> web.Response:
+        """Handle push notification from IPX800 (GET or POST).
+
+        Expected params:
         - mac: MAC address (format: 00:04:A3:87:00:1F)
         - inputs: 32 chars of 0/1 representing input states
         - outputs: 32 chars of 0/1 representing output states
         """
         try:
-            mac = request.query.get("mac")
-            inputs_str = request.query.get("inputs")
-            outputs_str = request.query.get("outputs")
+            # Support both GET (query params) and POST (body or query params)
+            if request.method == "POST":
+                data = await request.post()
+                mac = data.get("mac") or request.query.get("mac")
+                inputs_str = data.get("inputs") or request.query.get("inputs")
+                outputs_str = data.get("outputs") or request.query.get("outputs")
+            else:
+                mac = request.query.get("mac")
+                inputs_str = request.query.get("inputs")
+                outputs_str = request.query.get("outputs")
 
             if not all([mac, inputs_str, outputs_str]):
                 logger.warning(
