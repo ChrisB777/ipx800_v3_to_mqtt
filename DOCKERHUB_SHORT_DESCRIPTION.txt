@@ -1,0 +1,1 @@
+Bridge IPX800 v3 to MQTT. Real-time push + polling. 64 entities auto-discovery for HomeAssistant.

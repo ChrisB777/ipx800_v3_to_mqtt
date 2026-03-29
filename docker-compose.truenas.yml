@@ -1,9 +1,9 @@
 services:
   ipx800-mqtt:
-    build: .
+    image: chrisb777/ipx800_v3_to_mqtt:v1.0.0
     container_name: ipx800-mqtt
     ports:
-      - "${HTTP_PORT:-8080}:8080"
+      - "8080:8080"
     environment:
       - IPX800_HOST=${IPX800_HOST:-192.168.1.12}
       - IPX800_PORT=${IPX800_PORT:-80}
