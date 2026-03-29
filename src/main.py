@@ -64,6 +64,7 @@ class IPX800Bridge:
 
         # Create HTTP server (port 8080 inside container)
         self.http_server = PushServer(8080, self.state_manager)
+        self.http_server.set_change_handler(self.handle_state_change)
 
         # Start HTTP server
         await self.http_server.start()
@@ -78,6 +79,16 @@ class IPX800Bridge:
         self._polling_task = asyncio.create_task(self.polling_loop())
 
         logger.info("bridge_started")
+
+    def handle_state_change(self, index: int, is_input: bool, state: bool):
+        """Handle state change from push notification."""
+        if not self.mqtt_client:
+            return
+
+        if is_input:
+            self.mqtt_client.publish_input_state(index, state)
+        else:
+            self.mqtt_client.publish_relay_state(index, state)
 
     async def handle_mqtt_command(self, relay_index: int, command: str) -> bool:
         """Handle relay command from MQTT."""

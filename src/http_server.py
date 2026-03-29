@@ -1,5 +1,6 @@
 """HTTP server for receiving IPX800 push notifications."""
 
+from typing import Callable, Optional
 from aiohttp import web
 import structlog
 
@@ -17,6 +18,11 @@ class PushServer:
         self.app.router.add_get("/api/ipx/push", self.handle_push)
         self.app.router.add_post("/api/ipx/push", self.handle_push)
         self.runner: web.AppRunner = None
+        self._change_handler: Optional[Callable[[int, bool, bool], None]] = None
+
+    def set_change_handler(self, handler: Callable[[int, bool, bool], None]):
+        """Set handler for state changes (index, is_input, state)."""
+        self._change_handler = handler
 
     async def handle_root(self, request: web.Request) -> web.Response:
         """Simple health check endpoint."""
@@ -68,6 +74,13 @@ class PushServer:
             await self.state_manager.update_mac(mac)
             changed_inputs = await self.state_manager.update_inputs(inputs)
             changed_outputs = await self.state_manager.update_outputs(outputs)
+
+            # Notify MQTT of changes
+            if self._change_handler:
+                for idx in changed_inputs:
+                    self._change_handler(idx, True, inputs[idx])
+                for idx in changed_outputs:
+                    self._change_handler(idx, False, outputs[idx])
 
             logger.info(
                 "push_processed",
